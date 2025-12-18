@@ -1,0 +1,1 @@
+-- External table definitions for HDFS
