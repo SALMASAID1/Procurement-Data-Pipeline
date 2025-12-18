@@ -1,1 +1,140 @@
-# Includes Metabase service (Imp. 4)
+version: '3.8'
+
+services:
+  # --- STORAGE LAYER (HDFS) ---
+  # Two DataNodes satisfy the requirement for replication (factor = 2) 
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    restart: always
+    volumes:
+      - namenode_data:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=procurement_cluster
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+
+  datanode1:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode1
+    depends_on: [namenode]
+    volumes:
+      - datanode1_data:/hadoop/dfs/data
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+
+  datanode2:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode2
+    depends_on: [namenode]
+    volumes:
+      - datanode2_data:/hadoop/dfs/data
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+
+  # --- METADATA LAYER (HIVE METASTORE) ---
+  # Acts as the bridge between HDFS files and SQL structures [cite: 31, 254]
+  metastore-db:
+    image: postgres:13
+    container_name: metastore-db
+    environment:
+      - POSTGRES_DB=metastore_db
+      - POSTGRES_USER=hive
+      - POSTGRES_PASSWORD=hive
+
+  hive-metastore:
+    image: apache/hive:3.1.3
+    container_name: hive-metastore
+    depends_on: [metastore-db, namenode]
+    ports:
+      - "9083:9083"
+    environment:
+      - SERVICE_NAME=metastore
+      - DB_DRIVER=postgres
+      - SERVICE_OPTS=-Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://metastore-db:5432/metastore_db -Djavax.jdo.option.ConnectionUserName=hive -Djavax.jdo.option.ConnectionPassword=hive
+    command: /opt/hive/bin/hive --service metastore
+
+  # --- RELATIONAL LAYER (MASTER DATA) ---
+  # Stores Product and Supplier attributes as the OLTP source [cite: 40, 256]
+  postgres-main:
+    image: postgres:13
+    container_name: postgres-main
+    environment:
+      - POSTGRES_DB=procurement
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+    ports:
+      - "5432:5432"
+
+  # --- COMPUTE ENGINE (TRINO) ---
+  # Federated engine to calculate Net Demand [cite: 31, 254]
+  trino:
+    image: trinodb/trino:latest
+    container_name: trino
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./trino-conf:/etc/trino
+    depends_on: [hive-metastore, postgres-main]
+
+  # --- ORCHESTRATION LAYER (AIRFLOW) ---
+  # Orchestrates ingestion, computation, and extraction steps [cite: 231]
+  airflow-db:
+    image: postgres:13
+    container_name: airflow-db
+    environment:
+      - POSTGRES_DB=airflow
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+
+  airflow-init:
+    image: apache/airflow:2.7.1
+    container_name: airflow-init
+    depends_on: [airflow-db]
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    command: >-
+      bash -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com"
+    restart: on-failure
+
+  airflow-webserver:
+    image: apache/airflow:2.7.1
+    container_name: airflow-webserver
+    depends_on:
+      - airflow-db
+      - airflow-init
+    ports:
+      - "8081:8080"
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    command: webserver
+
+  airflow-scheduler:
+    image: apache/airflow:2.7.1
+    container_name: airflow-scheduler
+    depends_on:
+      - airflow-db
+      - airflow-init
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data 
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+    command: scheduler
+
+  # --- VISUALIZATION LAYER (METABASE) ---
+  # Provides the Manager View for Procurement KPIs [cite: 157]
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    ports:
+      - "3000:3000"
+    depends_on: [trino]
+
+volumes:
+  namenode_data:
+  datanode1_data:
+  datanode2_data:

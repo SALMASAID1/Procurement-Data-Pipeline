@@ -1,1 +1,0 @@
-# HDFS client helpers
