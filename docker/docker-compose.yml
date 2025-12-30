@@ -9,6 +9,7 @@ services:
     restart: always
     volumes:
       - namenode_data:/hadoop/dfs/name
+      - ./hadoop-conf:/etc/hadoop
     environment:
       - CLUSTER_NAME=procurement_cluster
     ports:

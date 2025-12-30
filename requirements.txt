@@ -1,1 +1,11 @@
-# Python dependencies
+# =============================================================================
+# Python Dependencies for Procurement Data Pipeline
+# =============================================================================
+
+# --- Data Generation (src/generator/) ---
+faker>=18.0.0              # Synthetic data generation
+pandas>=2.0.0              # Data manipulation
+pyarrow>=12.0.0            # Parquet file support
+
+# --- Trino Client (dags/utils/) ---
+trino>=0.320.0             # Trino Python client
