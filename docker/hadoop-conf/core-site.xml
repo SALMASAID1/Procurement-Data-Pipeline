@@ -4,8 +4,4 @@
         <name>fs.defaultFS</name>
         <value>hdfs://namenode:9000</value>
     </property>
-<<<<<<< HEAD
-<property><name>fs.defaultFS</name><value>hdfs://b189d97faec9:8020</value></property>
-=======
->>>>>>> mohamed
 </configuration>
