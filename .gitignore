@@ -1,4 +1,8 @@
 venv/
 docs/
 __pycache__/
+<<<<<<< HEAD
 *.pyc
+=======
+*.pyc/
+>>>>>>> mohamed
