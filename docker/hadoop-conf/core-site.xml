@@ -4,5 +4,7 @@
         <name>fs.defaultFS</name>
         <value>hdfs://namenode:9000</value>
     </property>
-<property><name>fs.defaultFS</name><value>hdfs://512cfe6d6cb3:8020</value></property>
+<property><name>fs.defaultFS</name><value>hdfs://namenode:9000</value></property>
+<property><name>fs.defaultFS</name><value>hdfs://namenode:9000</value></property>
+<property><name>fs.defaultFS</name><value>hdfs://fbee462e0c13:8020</value></property>
 </configuration>

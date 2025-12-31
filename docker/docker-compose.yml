@@ -22,8 +22,10 @@ services:
     depends_on: [namenode]
     volumes:
       - datanode1_data:/hadoop/dfs/data
+      - ./hadoop-conf:/etc/hadoop
     environment:
       - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - SERVICE_PRECONDITION=namenode:9870
 
   datanode2:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
@@ -31,8 +33,10 @@ services:
     depends_on: [namenode]
     volumes:
       - datanode2_data:/hadoop/dfs/data
+      - ./hadoop-conf:/etc/hadoop
     environment:
       - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - SERVICE_PRECONDITION=namenode:9870
 
   # --- METADATA LAYER (HIVE METASTORE) ---
   # Acts as the bridge between HDFS files and SQL structures [cite: 31, 254]
