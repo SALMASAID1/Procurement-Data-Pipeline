@@ -82,6 +82,7 @@ services:
       - "8080:8080"
     volumes:
       - ./trino-conf:/etc/trino
+      - ./hadoop-conf:/etc/hadoop
     depends_on: [hive-metastore, postgres-main]
 
   # --- ORCHESTRATION LAYER (AIRFLOW) ---

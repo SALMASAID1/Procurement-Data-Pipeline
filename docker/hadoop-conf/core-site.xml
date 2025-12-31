@@ -2,9 +2,6 @@
 <configuration>
     <property>
         <name>fs.defaultFS</name>
-        <value>hdfs://namenode:9000</value>
+        <value>hdfs://namenode:8020</value>
     </property>
-<property><name>fs.defaultFS</name><value>hdfs://namenode:9000</value></property>
-<property><name>fs.defaultFS</name><value>hdfs://namenode:9000</value></property>
-<property><name>fs.defaultFS</name><value>hdfs://fbee462e0c13:8020</value></property>
 </configuration>
