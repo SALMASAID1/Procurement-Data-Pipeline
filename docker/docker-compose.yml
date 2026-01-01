@@ -54,6 +54,8 @@ services:
     depends_on: [metastore-db, namenode]
     ports:
       - "9083:9083"
+    volumes:
+      - ./src/sql:/opt/hive/scripts
     environment:
       - SERVICE_NAME=metastore
       - DB_DRIVER=postgres
