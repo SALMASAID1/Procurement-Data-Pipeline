@@ -25,16 +25,23 @@ class Order:
     supplier_id: int
     status: str = "PENDING"
     
-    def to_dict(self) -> dict:
-        """Convert to dictionary for DataFrame creation"""
-        return {
+    def to_dict(self, include_partition_col: bool = False) -> dict:
+        """Convert to dictionary for DataFrame creation.
+        
+        Args:
+            include_partition_col: If False, excludes order_date (partition column)
+                                   since it's encoded in the Hive directory path.
+        """
+        result = {
             'order_id': self.order_id,
             'product_id': self.product_id,
             'quantity': self.quantity,
-            'order_date': self.order_date.isoformat(),
             'supplier_id': self.supplier_id,
             'status': self.status
         }
+        if include_partition_col:
+            result['order_date'] = self.order_date.isoformat()
+        return result
 
 
 @dataclass
@@ -49,16 +56,23 @@ class InventorySnapshot:
     snapshot_date: date
     warehouse_id: int = 1
     
-    def to_dict(self) -> dict:
-        """Convert to dictionary for DataFrame creation"""
-        return {
+    def to_dict(self, include_partition_col: bool = False) -> dict:
+        """Convert to dictionary for DataFrame creation.
+        
+        Args:
+            include_partition_col: If False, excludes snapshot_date (partition column)
+                                   since it's encoded in the Hive directory path.
+        """
+        result = {
             'product_id': self.product_id,
             'available_qty': self.available_qty,
             'reserved_qty': self.reserved_qty,
             'safety_stock': self.safety_stock,
-            'snapshot_date': self.snapshot_date.isoformat(),
             'warehouse_id': self.warehouse_id
         }
+        if include_partition_col:
+            result['snapshot_date'] = self.snapshot_date.isoformat()
+        return result
     
     @property
     def net_available(self) -> int:

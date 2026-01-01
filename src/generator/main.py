@@ -76,23 +76,30 @@ def main (exec_date :date = None , num_orders : int = 100):
     print(f"📅 Generating data for: {exec_date.isoformat()}")
     print(f"{'='*60}\n")
 
-    os.makedirs(OUTPUT_DIR , exist_ok=True)
+    # Create Hive-compatible partition directories
+    # Structure: /orders/order_date=YYYY-MM-DD/data.parquet
+    #            /stock/snapshot_date=YYYY-MM-DD/data.parquet
+    orders_partition_dir = os.path.join(OUTPUT_DIR, "orders", f"order_date={exec_date.isoformat()}")
+    stock_partition_dir = os.path.join(OUTPUT_DIR, "stock", f"snapshot_date={exec_date.isoformat()}")
+    
+    os.makedirs(orders_partition_dir, exist_ok=True)
+    os.makedirs(stock_partition_dir, exist_ok=True)
 
     # Generate Orders
     print("📦 Generating orders...")
     orders = generate_orders(exec_date , num_orders)
-    orders_file = os.path.join(OUTPUT_DIR ,f"orders_{exec_date.isoformat()}.parquet" )
+    orders_file = os.path.join(orders_partition_dir, "data.parquet")
     save_to_parquet(orders , orders_file , "orders")
 
     # Generate Inventory Snapshots
     print("🛒 Generating inventory snapshots...")
     inventory = generate_inventory(exec_date)
-    inventory_file = os.path.join(OUTPUT_DIR ,f"inventory_{exec_date.isoformat()}.parquet")
+    inventory_file = os.path.join(stock_partition_dir, "data.parquet")
     save_to_parquet(inventory , inventory_file , "inventory")
 
     print(f"✅ Generation Complete!")
-    print(f"   - Orders: {len(orders)} records")
-    print(f"   - Inventory: {len(inventory)} records")
+    print(f"   - Orders: {len(orders)} records → {orders_partition_dir}")
+    print(f"   - Inventory: {len(inventory)} records → {stock_partition_dir}")
 
 if __name__ == "__main__":
     main(num_orders=10000)
