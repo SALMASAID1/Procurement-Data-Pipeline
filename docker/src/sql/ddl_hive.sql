@@ -16,7 +16,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS procurement_raw.orders (
 )
 PARTITIONED BY (order_date DATE)
 STORED AS PARQUET
-LOCATION 'hdfs://namenode:9000/raw/orders';
+LOCATION 'hdfs://namenode:8020/raw/orders';
 
 -- =====================================================
 -- INVENTORY SNAPSHOTS EXTERNAL TABLE
@@ -30,7 +30,7 @@ CREATE EXTERNAL TABLE IF NOT EXISTS procurement_raw.inventory (
 )
 PARTITIONED BY (snapshot_date DATE)
 STORED AS PARQUET
-LOCATION 'hdfs://namenode:9000/raw/stock';
+LOCATION 'hdfs://namenode:8020/raw/stock';
 
 -- =====================================================
 -- PARTITION REPAIR COMMANDS
