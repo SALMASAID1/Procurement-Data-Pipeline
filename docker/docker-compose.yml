@@ -200,6 +200,8 @@ services:
       - "8081:8080"
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+      - ./src/sql:/opt/airflow/sql
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
@@ -215,7 +217,8 @@ services:
       - airflow-init
     volumes:
       - ./dags:/opt/airflow/dags
-      - ./data:/opt/airflow/data 
+      - ./data:/opt/airflow/data
+      - ./src/sql:/opt/airflow/sql
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
     command: scheduler
