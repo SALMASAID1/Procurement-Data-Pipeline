@@ -1,42 +1,82 @@
+# Main Airflow orchestration
 """
-    Procurement Pipeline DAG
+Procurement Data Pipeline DAG
+
+This DAG orchestrates the daily data pipeline:
+1. Generate synthetic procurement data (orders & inventory)
+2. Upload partitioned parquet files to HDFS
+3. Sync Hive metastore partitions via Trino
 """
 
-
+from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from datetime import datetime, timedelta
-from utils.hdfs_helper import HDFSHelper 
-from utils.trino_client import TrinoClient 
+from airflow.operators.bash import BashOperator
 
+# Default arguments for the DAG
 default_args = {
-    'owner': 'data_engineering',
-    'retries': 2,
+    'owner': 'procurement',
+    'depends_on_past': False,
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
 
-def batch_ingest_to_hdfs(exec_date, **context):
-    hdfs = HDFSHelper()
-    hdfs.purge_directory(exec_date, 'orders')
-    hdfs.upload_file(f'/opt/airflow/data/raw/orders_{exec_date}.parquet', f'/raw/orders/{exec_date}/')
-    return f"Ingested data for {exec_date}"
+# DAG definition
+dag = DAG(
+    'procurement_data_pipeline',
+    default_args=default_args,
+    description='Daily procurement data ingestion pipeline',
+    schedule_interval='@daily',
+    start_date=datetime(2025, 12, 31),
+    catchup=False,
+    tags=['procurement', 'data-pipeline'],
+)
 
-def calculate_net_demand(exec_date, **context):
-    trino = TrinoClient()
-    results = trino.execute_net_demand(exec_date)
-    context['ti'].xcom_push(key='net_demand_results', value=results)
-    trino.close()
+# Task 1: Generate synthetic data
+generate_data = BashOperator(
+    task_id='generate_data',
+    bash_command='''
+        cd /opt/airflow/dags/../src/generator && \
+        python main.py --date {{ ds }}
+    ''',
+    dag=dag,
+)
 
-def extract_supplier_orders(exec_date, **context):
-    trino = TrinoClient()
-    results = context['ti'].xcom_pull(key='net_demand_results', task_ids='calculate_net_demand')
-    trino.export_to_json(results, f'/opt/airflow/data/output/supplier_orders_{exec_date}.json')
+# Task 2: Upload orders to HDFS
+upload_orders = BashOperator(
+    task_id='upload_orders_to_hdfs',
+    bash_command='''
+        hdfs dfs -mkdir -p /raw/orders/order_date={{ ds }} && \
+        hdfs dfs -put -f /opt/airflow/data/raw/orders/order_date={{ ds }}/* \
+            /raw/orders/order_date={{ ds }}/
+    ''',
+    dag=dag,
+)
 
-with DAG('procurement_pipeline', default_args=default_args, schedule_interval='0 6 * * *', 
-         start_date=datetime(2025, 12, 1), catchup=False) as dag:
-    
-    task_ingest = PythonOperator(task_id='batch_ingest_hdfs', python_callable=batch_ingest_to_hdfs, op_kwargs={'exec_date': '{{ds}}'})
-    task_net_demand = PythonOperator(task_id='calculate_net_demand', python_callable=calculate_net_demand, op_kwargs={'exec_date': '{{ds}}'})
-    task_extract = PythonOperator(task_id='extract_json_orders', python_callable=extract_supplier_orders, op_kwargs={'exec_date': '{{ds}}'})
+# Task 3: Upload inventory to HDFS
+upload_inventory = BashOperator(
+    task_id='upload_inventory_to_hdfs',
+    bash_command='''
+        hdfs dfs -mkdir -p /raw/stock/snapshot_date={{ ds }} && \
+        hdfs dfs -put -f /opt/airflow/data/raw/stock/snapshot_date={{ ds }}/* \
+            /raw/stock/snapshot_date={{ ds }}/
+    ''',
+    dag=dag,
+)
 
-    task_ingest >> task_net_demand >> task_extract
+# Task 4: Sync partitions in Hive metastore via Trino
+sync_partitions = BashOperator(
+    task_id='sync_hive_partitions',
+    bash_command='''
+        trino --server trino:8080 --execute \
+            "CALL hive.system.sync_partition_metadata('procurement_raw', 'orders', 'ADD')" && \
+        trino --server trino:8080 --execute \
+            "CALL hive.system.sync_partition_metadata('procurement_raw', 'inventory', 'ADD')"
+    ''',
+    dag=dag,
+)
+
+# Define task dependencies
+generate_data >> [upload_orders, upload_inventory] >> sync_partitions

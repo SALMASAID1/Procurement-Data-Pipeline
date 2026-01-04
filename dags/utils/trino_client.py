@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
     Trino Query Execution Client
     
@@ -133,3 +134,5 @@ class TrinoClient:
         """Context manager exit - ensures connection is closed"""
         self.close()
         return False
+=======
+>>>>>>> origin/salma
