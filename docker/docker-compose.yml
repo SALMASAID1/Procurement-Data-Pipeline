@@ -46,82 +46,14 @@ services:
     networks:
       - procurement-net
 
-  # --- METADATA LAYER (HIVE METASTORE) ---
-  # Acts as the bridge between HDFS files and SQL structures [cite: 31, 254]
-  metastore-db:
-    image: postgres:13
-    container_name: metastore-db
-    environment:
-      - POSTGRES_DB=metastore_db
-      - POSTGRES_USER=hive
-      - POSTGRES_PASSWORD=hive
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hive -d metastore_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - procurement-net
-
-  hive-metastore:
-    image: bde2020/hive:2.3.2-postgresql-metastore
-    container_name: hive-metastore
-    restart: on-failure
-    depends_on:
-      metastore-db:
-        condition: service_healthy
-      namenode:
-        condition: service_started
-    ports:
-      - "9083:9083"
-    environment:
-      - HIVE_SITE_CONF_javax_jdo_option_ConnectionURL=jdbc:postgresql://metastore-db:5432/metastore_db
-      - HIVE_SITE_CONF_javax_jdo_option_ConnectionDriverName=org.postgresql.Driver
-      - HIVE_SITE_CONF_javax_jdo_option_ConnectionUserName=hive
-      - HIVE_SITE_CONF_javax_jdo_option_ConnectionPassword=hive
-      - HIVE_SITE_CONF_datanucleus_autoCreateSchema=true
-      - HIVE_SITE_CONF_datanucleus_autoCreateTables=true
-      - HIVE_SITE_CONF_datanucleus_schema_autoCreateAll=true
-      - HIVE_SITE_CONF_hive_metastore_schema_verification=false
-      - HIVE_SITE_CONF_hive_metastore_uris=thrift://hive-metastore:9083
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-      - SERVICE_PRECONDITION=namenode:8020 metastore-db:5432
-    command: /opt/hive/bin/hive --service metastore
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 9083 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-    networks:
-      - procurement-net
-
-  hive-server:
-    image: bde2020/hive:2.3.2-postgresql-metastore
-    container_name: hive-server
-    restart: on-failure
-    depends_on:
-      hive-metastore:
-        condition: service_healthy
-    ports:
-      - "10000:10000"
-      - "10002:10002"
-    environment:
-      - HIVE_SITE_CONF_javax_jdo_option_ConnectionURL=jdbc:postgresql://metastore-db:5432/metastore_db
-      - HIVE_SITE_CONF_javax_jdo_option_ConnectionDriverName=org.postgresql.Driver
-      - HIVE_SITE_CONF_javax_jdo_option_ConnectionUserName=hive
-      - HIVE_SITE_CONF_javax_jdo_option_ConnectionPassword=hive
-      - HIVE_SITE_CONF_hive_metastore_uris=thrift://hive-metastore:9083
-      - HIVE_SITE_CONF_hive_server2_enable_doAs=false
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
-      - CORE_CONF_hadoop_proxyuser_root_hosts=*
-      - CORE_CONF_hadoop_proxyuser_root_groups=*
-      - CORE_CONF_hadoop_proxyuser_hive_hosts=*
-      - CORE_CONF_hadoop_proxyuser_hive_groups=*
-      - SERVICE_PRECONDITION=hive-metastore:9083
-    command: /opt/hive/bin/hive --service hiveserver2
-    networks:
-      - procurement-net
+  # --- METADATA LAYER (DISABLED - Using Trino File-Based Metastore) ---
+  # The following services are commented out because we use Trino's file-based
+  # metastore which stores metadata directly in HDFS, eliminating the need for
+  # an external Hive Metastore service. This avoids SocketTimeoutException issues.
+  
+  # metastore-db: (DISABLED)
+  # hive-metastore: (DISABLED)
+  # hive-server: (DISABLED)
 
   # --- RELATIONAL LAYER (MASTER DATA) ---
   # Stores Product and Supplier attributes as the OLTP source [cite: 40, 256]
@@ -163,6 +95,7 @@ services:
 
   # --- COMPUTE ENGINE (TRINO) ---
   # Federated engine to calculate Net Demand [cite: 31, 254]
+  # Uses file-based metastore (no Hive Metastore dependency)
   trino:
     image: trinodb/trino:latest
     container_name: trino
@@ -173,7 +106,7 @@ services:
       - ./trino-conf:/etc/trino
       - ./hadoop-conf:/etc/hadoop
     depends_on:
-      hive-metastore:
+      namenode:
         condition: service_healthy
       postgres-main:
         condition: service_healthy
@@ -254,16 +187,19 @@ services:
       - procurement-net
 
 
-  # --- SCHEMA INITIALIZATION (HIVE DDL) ---
-  # Runs ddl_hive.sql via beeline after HiveServer2 is ready
-  hive-init:
-    image: bde2020/hive:2.3.2-postgresql-metastore
-    container_name: hive-init
+  # --- SCHEMA INITIALIZATION (TRINO DDL) ---
+  # Runs DDL via Trino CLI after Trino is ready (replaces hive-init)
+  trino-init:
+    image: trinodb/trino:latest
+    container_name: trino-init
     depends_on:
-      - hive-server
+      - trino
     volumes:
-      - ./src/sql:/sql
-    entrypoint: ["/bin/bash", "/sql/init_hive_schema.sh"]
+      - ./src/sql:/sql:ro
+    entrypoint: ["/bin/bash", "/sql/init_trino_schema.sh"]
+    environment:
+      - TRINO_HOST=trino
+      - TRINO_PORT=8080
     restart: "no"
     networks:
       - procurement-net
