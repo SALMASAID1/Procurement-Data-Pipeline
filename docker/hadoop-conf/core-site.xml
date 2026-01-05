@@ -50,4 +50,16 @@
 <property><name>hadoop.proxyuser.hive.groups</name><value>*</value></property>
 <property><name>hadoop.proxyuser.root.hosts</name><value>*</value></property>
 <property><name>fs.defaultFS</name><value>hdfs://namenode:8020</value></property>
+<property><name>fs.defaultFS</name><value>hdfs://c151e78e2a84:8020</value></property>
+<property><name>hadoop.proxyuser.hive.hosts</name><value>*</value></property>
+<property><name>hadoop.proxyuser.root.groups</name><value>*</value></property>
+<property><name>hadoop.proxyuser.hive.groups</name><value>*</value></property>
+<property><name>hadoop.proxyuser.root.hosts</name><value>*</value></property>
+<property><name>fs.defaultFS</name><value>hdfs://namenode:8020</value></property>
+<property><name>fs.defaultFS</name><value>hdfs://b05163a077d7:8020</value></property>
+<property><name>hadoop.proxyuser.hive.hosts</name><value>*</value></property>
+<property><name>hadoop.proxyuser.root.groups</name><value>*</value></property>
+<property><name>hadoop.proxyuser.hive.groups</name><value>*</value></property>
+<property><name>hadoop.proxyuser.root.hosts</name><value>*</value></property>
+<property><name>fs.defaultFS</name><value>hdfs://namenode:8020</value></property>
 </configuration>

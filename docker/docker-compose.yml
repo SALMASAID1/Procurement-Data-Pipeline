@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # --- STORAGE LAYER (HDFS) ---
   # Two DataNodes satisfy the requirement for replication (factor = 2) 
@@ -68,6 +66,7 @@ services:
   hive-metastore:
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-metastore
+    restart: on-failure
     depends_on:
       metastore-db:
         condition: service_healthy
@@ -87,14 +86,23 @@ services:
       - HIVE_SITE_CONF_hive_metastore_uris=thrift://hive-metastore:9083
       - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
       - SERVICE_PRECONDITION=namenode:8020 metastore-db:5432
+    command: /opt/hive/bin/hive --service metastore
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9083 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       - procurement-net
 
   hive-server:
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-server
+    restart: on-failure
     depends_on:
-      - hive-metastore
+      hive-metastore:
+        condition: service_healthy
     ports:
       - "10000:10000"
       - "10002:10002"
@@ -158,12 +166,17 @@ services:
   trino:
     image: trinodb/trino:latest
     container_name: trino
+    restart: on-failure
     ports:
       - "8080:8080"
     volumes:
       - ./trino-conf:/etc/trino
       - ./hadoop-conf:/etc/hadoop
-    depends_on: [hive-metastore, postgres-main]
+    depends_on:
+      hive-metastore:
+        condition: service_healthy
+      postgres-main:
+        condition: service_healthy
     networks:
       - procurement-net
 
@@ -202,6 +215,7 @@ services:
   airflow-webserver:
     image: apache/airflow:2.7.1
     container_name: airflow-webserver
+    restart: on-failure
     depends_on:
       airflow-db:
         condition: service_healthy
@@ -223,6 +237,7 @@ services:
   airflow-scheduler:
     image: apache/airflow:2.7.1
     container_name: airflow-scheduler
+    restart: on-failure
     depends_on:
       airflow-db:
         condition: service_healthy
