@@ -94,22 +94,24 @@ class HDFSHelper:
         self, 
         local_file: str, 
         table: str, 
-        partition_col: str, 
-        partition_val: str
+        partition_val: str,
+        base_dir: str = None
     ) -> bool:
         """
-        Upload file to partitioned HDFS location (Hive-compatible).
+        Upload file to date-partitioned HDFS location.
+        Uses simple YYYY-MM-DD folder structure (not Hive-style partition=value).
         
         Args:
             local_file: Path to local parquet file
             table: Table name (orders or stock)
-            partition_col: Partition column name (order_date or snapshot_date)
-            partition_val: Partition value (e.g., 2026-01-04)
+            partition_val: Date value (e.g., 2026-01-04)
+            base_dir: Base directory (default: self.base_path which is /raw)
         
         Returns:
             True if successful, False otherwise
         """
-        hdfs_path = f"{self.base_path}/{table}/{partition_col}={partition_val}/"
+        base = base_dir or self.base_path
+        hdfs_path = f"{base}/{table}/{partition_val}/"
         
         # Create partition directory
         if not self.create_directory(hdfs_path):
@@ -120,20 +122,18 @@ class HDFSHelper:
         return self.upload_file(local_file, f"{hdfs_path}data.parquet")
 
     def upload_orders(self, local_file: str, exec_date: date) -> bool:
-        """Upload orders parquet file for a specific date."""
+        """Upload orders parquet file to /raw/orders/YYYY-MM-DD/"""
         return self.upload_partitioned_data(
             local_file=local_file,
             table="orders",
-            partition_col="order_date",
             partition_val=exec_date.isoformat()
         )
 
     def upload_inventory(self, local_file: str, exec_date: date) -> bool:
-        """Upload inventory/stock parquet file for a specific date."""
+        """Upload inventory/stock parquet file to /raw/stock/YYYY-MM-DD/"""
         return self.upload_partitioned_data(
             local_file=local_file,
             table="stock",
-            partition_col="snapshot_date",
             partition_val=exec_date.isoformat()
         )
 
@@ -147,24 +147,26 @@ class HDFSHelper:
         self.purge_directory(exec_date, "stock")
         return self.upload_inventory(local_file, exec_date)
 
-    def validate_partition_exists(self, table: str, partition_col: str, partition_val: str) -> bool:
+    def validate_partition_exists(self, table: str, partition_val: str, base_dir: str = None) -> bool:
         """
         Validate that a partition directory exists and contains data.
         
         Args:
-            table: Table name (orders or stock)
-            partition_col: Partition column name
-            partition_val: Partition value
+            table: Table name (orders, stock, aggregated_orders, net_demand)
+            partition_val: Date value (YYYY-MM-DD)
+            base_dir: Base directory (default: /raw)
         
         Returns:
             True if partition exists and has files
         """
-        path = f"{self.base_path}/{table}/{partition_col}={partition_val}"
+        base = base_dir or self.base_path
+        path = f"{base}/{table}/{partition_val}"
         return self.file_exists(path)
 
-    def get_partition_file_count(self, table: str, partition_col: str, partition_val: str) -> int:
+    def get_partition_file_count(self, table: str, partition_val: str, base_dir: str = None) -> int:
         """Count files in a partition directory."""
-        path = f"{self.base_path}/{table}/{partition_col}={partition_val}"
+        base = base_dir or self.base_path
+        path = f"{base}/{table}/{partition_val}"
         files = self.list_directory(path)
         if files:
             # Filter out the header line from ls output
@@ -182,5 +184,82 @@ class HDFSHelper:
         Returns:
             True if partition exists with parquet files
         """
-        partition_col = "order_date" if table == "orders" else "snapshot_date"
-        return self.get_partition_file_count(table, partition_col, exec_date.isoformat()) > 0 
+        return self.get_partition_file_count(table, exec_date.isoformat()) > 0
+
+    # =========================================================
+    # NEW METHODS FOR PROCESSED & OUTPUT DIRECTORIES
+    # =========================================================
+    
+    def upload_aggregated_orders(self, local_file: str, exec_date: date) -> bool:
+        """
+        Upload aggregated orders to /processed/aggregated_orders/YYYY-MM-DD/
+        Purpose: Store summed daily demand per product.
+        """
+        return self.upload_partitioned_data(
+            local_file=local_file,
+            table="aggregated_orders",
+            partition_val=exec_date.isoformat(),
+            base_dir="/processed"
+        )
+
+    def upload_net_demand(self, local_file: str, exec_date: date) -> bool:
+        """
+        Upload net demand results to /processed/net_demand/YYYY-MM-DD/
+        Purpose: Store pre-export MRP calculations.
+        """
+        return self.upload_partitioned_data(
+            local_file=local_file,
+            table="net_demand",
+            partition_val=exec_date.isoformat(),
+            base_dir="/processed"
+        )
+
+    def upload_supplier_orders(self, local_file: str, exec_date: date) -> bool:
+        """
+        Upload final JSON to /output/supplier_orders/YYYY-MM-DD/
+        Purpose: Final supplier delivery files.
+        """
+        hdfs_path = f"/output/supplier_orders/{exec_date.isoformat()}/"
+        self.create_directory(hdfs_path)
+        return self.upload_file(local_file, f"{hdfs_path}supplier_orders.json")
+
+    def log_exception(self, local_file: str, exec_date: date) -> bool:
+        """
+        Upload exception log to /logs/exceptions/YYYY-MM-DD/
+        Purpose: Data quality alerts and missing mappings.
+        """
+        hdfs_path = f"/logs/exceptions/{exec_date.isoformat()}/"
+        self.create_directory(hdfs_path)
+        return self.upload_file(local_file, f"{hdfs_path}exceptions.json")
+
+    def initialize_hdfs_structure(self) -> bool:
+        """
+        Create all required HDFS directories on startup.
+        Called once during pipeline initialization.
+        
+        Directory Structure:
+        /raw/orders/           - Landing zone for daily orders
+        /raw/stock/            - Landing zone for inventory snapshots
+        /processed/aggregated_orders/  - Summed daily demand
+        /processed/net_demand/         - Pre-export calculations
+        /output/supplier_orders/       - Final JSON deliverables
+        /logs/exceptions/              - Data quality alerts
+        """
+        directories = [
+            "/raw/orders",
+            "/raw/stock",
+            "/processed/aggregated_orders",
+            "/processed/net_demand",
+            "/output/supplier_orders",
+            "/logs/exceptions"
+        ]
+        
+        success = True
+        for dir_path in directories:
+            if not self.create_directory(dir_path):
+                logger.error(f"Failed to create: {dir_path}")
+                success = False
+            else:
+                logger.info(f"Created directory: {dir_path}")
+        
+        return success

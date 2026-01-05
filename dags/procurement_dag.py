@@ -32,8 +32,9 @@ def extract_supplier_orders(exec_date, **context):
     results = context['ti'].xcom_pull(key='net_demand_results', task_ids='calculate_net_demand')
     trino.export_to_json(results, f'/opt/airflow/data/output/supplier_orders_{exec_date}.json')
 
-with DAG('procurement_pipeline', default_args=default_args, schedule_interval='0 6 * * *', 
-         start_date=datetime(2025, 12, 1), catchup=False) as dag:
+with DAG('procurement_pipeline', default_args=default_args, schedule_interval='0 22 * * *', 
+         start_date=datetime(2025, 12, 1), catchup=False, 
+         description='Daily procurement pipeline - runs at 22:00 per PDF requirement') as dag:
     
     task_ingest = PythonOperator(task_id='batch_ingest_hdfs', python_callable=batch_ingest_to_hdfs, op_kwargs={'exec_date': '{{ds}}'})
     task_net_demand = PythonOperator(task_id='calculate_net_demand', python_callable=calculate_net_demand, op_kwargs={'exec_date': '{{ds}}'})
