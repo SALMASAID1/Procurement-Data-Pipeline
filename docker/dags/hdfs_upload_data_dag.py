@@ -34,8 +34,8 @@ VALID_PRODUCT_IDS = [1, 2, 3, 4, 5]
 VALID_SUPPLIER_IDS = [1, 2, 3]
 ORDER_STATUS = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"]
 
-# Dates to generate data for
-SAMPLE_DATES = ["2026-01-01", "2026-01-04"]
+TODAY = datetime.now().strftime("%Y-%m-%d")
+SAMPLE_DATES = [TODAY]
 
 
 # =============================================================================
