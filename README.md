@@ -184,11 +184,6 @@ The "Procurement Manager View" dashboard includes:
 - **SAID Salma** - Data Engineering
 - **TAMZIRT Mohamed** - Data Engineering
 
-## Course
-
-Big Data Engineering - ID2-S3  
-Academic Year 2025-2026
-
 ## License
 
-Academic Project - All Rights Reserved
+All Rights Reserved
