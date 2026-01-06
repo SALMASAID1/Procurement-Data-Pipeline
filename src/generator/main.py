@@ -76,11 +76,11 @@ def main (exec_date :date = None , num_orders : int = 100):
     print(f"📅 Generating data for: {exec_date.isoformat()}")
     print(f"{'='*60}\n")
 
-    # Create Hive-compatible partition directories
-    # Structure: /orders/order_date=YYYY-MM-DD/data.parquet
-    #            /stock/snapshot_date=YYYY-MM-DD/data.parquet
-    orders_partition_dir = os.path.join(OUTPUT_DIR, "orders", f"order_date={exec_date.isoformat()}")
-    stock_partition_dir = os.path.join(OUTPUT_DIR, "stock", f"snapshot_date={exec_date.isoformat()}")
+    # Create date-partitioned directories (simple YYYY-MM-DD structure)
+    # Structure: /raw/orders/YYYY-MM-DD/data.parquet
+    #            /raw/stock/YYYY-MM-DD/data.parquet
+    orders_partition_dir = os.path.join(OUTPUT_DIR, "orders", exec_date.isoformat())
+    stock_partition_dir = os.path.join(OUTPUT_DIR, "stock", exec_date.isoformat())
     
     os.makedirs(orders_partition_dir, exist_ok=True)
     os.makedirs(stock_partition_dir, exist_ok=True)
