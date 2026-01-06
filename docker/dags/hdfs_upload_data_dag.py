@@ -29,6 +29,11 @@ default_args = {
 # WebHDFS endpoint
 WEBHDFS_URL = "http://namenode:9870/webhdfs/v1"
 
+# Trino connection settings (for partition sync)
+TRINO_HOST = "trino"
+TRINO_PORT = 8080
+TRINO_USER = "airflow"
+
 # Configuration - Must match PostgreSQL master data
 VALID_PRODUCT_IDS = [1, 2, 3, 4, 5]
 VALID_SUPPLIER_IDS = [1, 2, 3]
@@ -227,14 +232,14 @@ def generate_and_upload_orders(**context):
         logger.info(f"\n📅 Processing orders for: {date_str}")
         
         # Generate orders
-        orders = generate_orders(exec_date, num_orders=100)
+        orders = generate_orders(exec_date, num_orders=1000)
         logger.info(f"   Generated {len(orders)} orders")
         
         # Convert to Parquet
         parquet_data = create_parquet_buffer(orders, "orders")
         
-        # Upload to HDFS
-        hdfs_path = f"/raw/orders/{date_str}/data.parquet"
+        # Upload to HDFS (Hive partition style folder)
+        hdfs_path = f"/raw/orders/order_date={date_str}/data.parquet"
         if upload_to_hdfs(hdfs_path, parquet_data):
             success_count += 1
         else:
@@ -266,8 +271,8 @@ def generate_and_upload_inventory(**context):
         # Convert to Parquet
         parquet_data = create_parquet_buffer(inventory, "inventory")
         
-        # Upload to HDFS
-        hdfs_path = f"/raw/stock/{date_str}/data.parquet"
+        # Upload to HDFS (Hive partition style folder)
+        hdfs_path = f"/raw/stock/snapshot_date={date_str}/data.parquet"
         if upload_to_hdfs(hdfs_path, parquet_data):
             success_count += 1
         else:
@@ -287,8 +292,8 @@ def verify_all_uploads(**context):
     
     all_files = []
     for date_str in SAMPLE_DATES:
-        all_files.append(f"/raw/orders/{date_str}/data.parquet")
-        all_files.append(f"/raw/stock/{date_str}/data.parquet")
+        all_files.append(f"/raw/orders/order_date={date_str}/data.parquet")
+        all_files.append(f"/raw/stock/snapshot_date={date_str}/data.parquet")
     
     missing = []
     for file_path in all_files:
@@ -334,11 +339,59 @@ def print_summary(**context):
             pass
     
     logger.info("\n" + "="*60)
-    logger.info("✅ Step 4 Complete! Data is ready for Hive partition registration.")
-    logger.info("   Next: Run Step 5 to register Hive partitions.")
+    logger.info("✅ Step 4 Complete! Data uploaded and partitions synced.")
+    logger.info("   Trino tables are ready for queries.")
     logger.info("="*60)
     
     return "Summary complete"
+
+
+def sync_hive_partitions(**context):
+    """
+    Sync Hive metastore with HDFS partitions using Trino.
+    This automatically discovers new partition folders and registers them.
+    """
+    from trino.dbapi import connect
+    
+    logger.info("🔄 Syncing Hive partitions with HDFS...")
+    
+    conn = connect(
+        host=TRINO_HOST,
+        port=TRINO_PORT,
+        user=TRINO_USER,
+        catalog="hive",
+        schema="procurement_raw"
+    )
+    cursor = conn.cursor()
+    
+    tables_to_sync = [
+        ('procurement_raw', 'orders'),
+        ('procurement_raw', 'inventory')
+    ]
+    
+    synced = []
+    failed = []
+    
+    for schema, table in tables_to_sync:
+        try:
+            sync_query = f"CALL hive.system.sync_partition_metadata('{schema}', '{table}', 'ADD')"
+            logger.info(f"   Syncing {schema}.{table}...")
+            cursor.execute(sync_query)
+            cursor.fetchall()  # Complete the query
+            synced.append(f"{schema}.{table}")
+            logger.info(f"   ✅ Synced {schema}.{table}")
+        except Exception as e:
+            logger.error(f"   ❌ Failed to sync {schema}.{table}: {str(e)}")
+            failed.append(f"{schema}.{table}")
+    
+    cursor.close()
+    conn.close()
+    
+    if failed:
+        raise Exception(f"Failed to sync partitions for: {failed}")
+    
+    logger.info(f"🎉 Successfully synced partitions for: {synced}")
+    return f"Synced partitions for {len(synced)} tables"
 
 
 # =============================================================================
@@ -358,7 +411,7 @@ with DAG(
     dag.doc_md = """
     ## HDFS Upload Sample Data DAG (Step 4)
     
-    **Purpose:** Generate sample procurement data and upload to HDFS.
+    **Purpose:** Generate sample procurement data, upload to HDFS, and sync partitions.
     
     **When to run:** After Step 3 (HDFS directory initialization) is complete.
     
@@ -367,14 +420,11 @@ with DAG(
     2. Generates 5 inventory snapshots per date (one per product)
     3. Converts data to Parquet format (Snappy compression)
     4. Uploads to HDFS via WebHDFS API
+    5. **Automatically syncs Hive partitions with Trino**
     
     **Files Created:**
-    - `/raw/orders/2026-01-01/data.parquet`
-    - `/raw/orders/2026-01-04/data.parquet`
-    - `/raw/stock/2026-01-01/data.parquet`
-    - `/raw/stock/2026-01-04/data.parquet`
-    
-    **Next Step:** Run Step 5 to register Hive partitions (MSCK REPAIR TABLE)
+    - `/raw/orders/order_date=YYYY-MM-DD/data.parquet`
+    - `/raw/stock/snapshot_date=YYYY-MM-DD/data.parquet`
     
     **Trigger:** Manual only (click "Trigger DAG" button)
     """
@@ -394,10 +444,15 @@ with DAG(
         python_callable=verify_all_uploads,
     )
     
+    task_sync_partitions = PythonOperator(
+        task_id='sync_hive_partitions',
+        python_callable=sync_hive_partitions,
+    )
+    
     task_summary = PythonOperator(
         task_id='print_summary',
         python_callable=print_summary,
     )
     
-    # Orders and Inventory can run in parallel, then verify
-    [task_upload_orders, task_upload_inventory] >> task_verify >> task_summary
+    # Orders and Inventory in parallel -> verify -> sync partitions -> summary
+    [task_upload_orders, task_upload_inventory] >> task_verify >> task_sync_partitions >> task_summary

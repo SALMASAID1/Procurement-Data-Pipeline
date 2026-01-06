@@ -47,7 +47,8 @@ DDL_STATEMENTS = {
         )
         WITH (
             format = 'PARQUET',
-            external_location = 'hdfs://namenode:8020/raw/orders'
+            external_location = 'hdfs://namenode:8020/raw/orders',
+            partitioned_by = ARRAY['order_date']
         )
     """,
     
@@ -62,7 +63,8 @@ DDL_STATEMENTS = {
         )
         WITH (
             format = 'PARQUET',
-            external_location = 'hdfs://namenode:8020/raw/stock'
+            external_location = 'hdfs://namenode:8020/raw/stock',
+            partitioned_by = ARRAY['snapshot_date']
         )
     """,
     
@@ -74,8 +76,7 @@ DDL_STATEMENTS = {
             order_date DATE
         )
         WITH (
-            format = 'PARQUET',
-            external_location = 'hdfs://namenode:8020/processed/aggregated_orders'
+            format = 'PARQUET'
         )
     """,
     
@@ -91,8 +92,7 @@ DDL_STATEMENTS = {
             calculation_date DATE
         )
         WITH (
-            format = 'PARQUET',
-            external_location = 'hdfs://namenode:8020/processed/net_demand'
+            format = 'PARQUET'
         )
     """
 }

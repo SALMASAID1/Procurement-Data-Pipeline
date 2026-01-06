@@ -1,4 +1,68 @@
-venv/
-docs/
+# ============================================
+# Python
+# ============================================
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+env/
+.eggs/
+*.egg-info/
+*.egg
+
+# ============================================
+# IDE / Editor
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ============================================
+# Backup Files
+# ============================================
+*.backup
+*.bak
+*.orig
+
+# ============================================
+# Runtime / Generated Data
+# ============================================
+# Local data folder (Docker uses docker/data/)
+data/
+
+# Metabase persistent database
+docker/metabase-data/metabase.db/
+
+# Airflow logs and metadata
+*.log
+logs/
+
+# ============================================
+# Duplicates to Ignore (if accidentally recreated)
+# ============================================
+# Old DAGs folder (use docker/dags/ instead)
+dags/
+
+# Duplicate SQL (use docker/dags/sql/ instead)
+src/sql/
+docker/src/
+
+# ============================================
+# OS Files
+# ============================================
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Test / Coverage
+# ============================================
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
