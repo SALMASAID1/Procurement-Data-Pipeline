@@ -139,6 +139,7 @@ services:
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - _PIP_ADDITIONAL_REQUIREMENTS=trino
     command: >-
       bash -c "airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com"
     restart: on-failure
@@ -163,6 +164,7 @@ services:
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - _PIP_ADDITIONAL_REQUIREMENTS=trino
     command: webserver
     networks:
       - procurement-net
@@ -182,27 +184,14 @@ services:
       - ./src/sql:/opt/airflow/sql
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - _PIP_ADDITIONAL_REQUIREMENTS=trino
     command: scheduler
     networks:
       - procurement-net
 
-
-  # --- SCHEMA INITIALIZATION (TRINO DDL) ---
-  # Runs DDL via Trino CLI after Trino is ready (replaces hive-init)
-  trino-init:
-    image: trinodb/trino:latest
-    container_name: trino-init
-    depends_on:
-      - trino
-    volumes:
-      - ./src/sql:/sql:ro
-    entrypoint: ["/bin/bash", "/sql/init_trino_schema.sh"]
-    environment:
-      - TRINO_HOST=trino
-      - TRINO_PORT=8080
-    restart: "no"
-    networks:
-      - procurement-net
+  # --- SCHEMA INITIALIZATION ---
+  # Table creation is now handled by Airflow DAG: trino_init_tables_dag.py
+  # Trigger it manually from Airflow UI after infrastructure is up.
 
   # --- VISUALIZATION LAYER (METABASE) ---
   # Provides the Manager View for Procurement KPIs [cite: 157]
