@@ -13,17 +13,46 @@ A simplified Big Data pipeline for retail procurement that implements an end-to-
 ## Architecture
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Data Source   │     │   Processing    │     │    Output       │
-│   (Faker Gen)   │────▶│   (Trino SQL)   │────▶│  (JSON/HDFS)    │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        │                       │                       │
-        ▼                       ▼                       ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│      HDFS       │     │   PostgreSQL    │     │    Metabase     │
-│  (Parquet Data) │     │  (Master Data)  │     │   (Dashboard)   │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
+                            ┌─────────────────────────────────────────┐
+                            │           APACHE AIRFLOW                │
+                            │         (Orchestration)                 │
+                            │  DAGs: hdfs_init → trino_init →         │
+                            │  upload_data → pipeline → metabase      │
+                            └──────────────────┬──────────────────────┘
+                                               │ orchestrates
+                 ┌─────────────────────────────┼─────────────────────────────┐
+                 │                             │                             │
+                 ▼                             ▼                             ▼
+┌─────────────────────────┐   ┌─────────────────────────┐   ┌─────────────────────────┐
+│      DATA INGESTION     │   │       PROCESSING        │   │        OUTPUT           │
+│                         │   │                         │   │                         │
+│  ┌───────────────────┐  │   │  ┌───────────────────┐  │   │  ┌───────────────────┐  │
+│  │   Faker Generator │  │   │  │       TRINO       │  │   │  │   JSON Files      │  │
+│  │   (Orders/Stock)  │  │   │  │  (Federated SQL)  │  │   │  │ (Supplier Orders) │  │
+│  └─────────┬─────────┘  │   │  └─────────┬─────────┘  │   │  └───────────────────┘  │
+│            │            │   │            │            │   │                         │
+│            ▼            │   │     ┌──────┴──────┐     │   │  ┌───────────────────┐  │
+│  ┌───────────────────┐  │   │     │             │     │   │  │     METABASE      │  │
+│  │       HDFS        │◀─┼───┼─────┤   JOIN      │     │   │  │   (Dashboard)     │  │
+│  │  (Parquet Files)  │  │   │     │             │     │   │  └─────────┬─────────┘  │
+│  │  - /raw/orders    │──┼───┼────▶│             │     │   │            │            │
+│  │  - /raw/stock     │  │   │     └──────┬──────┘     │   │            │            │
+│  └───────────────────┘  │   │            │            │   │            │            │
+│                         │   │            ▼            │   │            │            │
+└─────────────────────────┘   │  ┌───────────────────┐  │   │            │            │
+                              │  │    PostgreSQL     │  │   │            │            │
+                              │  │   (Master Data)   │◀─┼───┼────────────┘            │
+                              │  │  - Products       │  │   │   queries via Trino     │
+                              │  │  - Suppliers      │  │   │                         │
+                              │  └───────────────────┘  │   └─────────────────────────┘
+                              │                         │
+                              └─────────────────────────┘
 ```
+
+**Data Flow:**
+1. **Ingestion**: Faker generates Orders & Inventory → stored as Parquet in HDFS
+2. **Processing**: Trino performs federated queries (HDFS + PostgreSQL master data)
+3. **Output**: JSON supplier orders + Metabase dashboards (querying Trino)
 
 ## Technology Stack
 
