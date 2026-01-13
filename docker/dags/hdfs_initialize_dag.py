@@ -22,7 +22,7 @@ default_args = {
 # WebHDFS endpoint (namenode container)
 WEBHDFS_URL = "http://namenode:9870/webhdfs/v1"
 
-# Directories to create
+# Directories 
 HDFS_DIRECTORIES = [
     "/raw/orders",
     "/raw/stock",
@@ -41,16 +41,16 @@ def create_hdfs_directory(path: str) -> bool:
         if response.status_code == 200:
             result = response.json()
             if result.get('boolean', False):
-                logger.info(f"✅ Created directory: {path}")
+                logger.info(f" Created directory: {path}")
                 return True
             else:
-                logger.warning(f"⚠️ Directory may already exist: {path}")
-                return True  # Not a failure if already exists
+                logger.warning(f" Directory may already exist: {path}")
+                return True 
         else:
-            logger.error(f"❌ Failed to create {path}: HTTP {response.status_code}")
+            logger.error(f" Failed to create {path}: HTTP {response.status_code}")
             return False
     except Exception as e:
-        logger.error(f"❌ Error creating {path}: {str(e)}")
+        logger.error(f" Error creating {path}: {str(e)}")
         return False
 
 
@@ -60,13 +60,13 @@ def set_hdfs_permissions(path: str, permission: str = "777") -> bool:
     try:
         response = requests.put(url, allow_redirects=True, timeout=30)
         if response.status_code == 200:
-            logger.info(f"✅ Set permissions {permission} on: {path}")
+            logger.info(f" Set permissions {permission} on: {path}")
             return True
         else:
-            logger.warning(f"⚠️ Could not set permissions on {path}: HTTP {response.status_code}")
+            logger.warning(f" Could not set permissions on {path}: HTTP {response.status_code}")
             return False
     except Exception as e:
-        logger.error(f"❌ Error setting permissions on {path}: {str(e)}")
+        logger.error(f" Error setting permissions on {path}: {str(e)}")
         return False
 
 
@@ -83,7 +83,7 @@ def initialize_hdfs_structure(**context):
         else:
             fail_count += 1
     
-    logger.info(f"📊 Directory creation complete: {success_count} success, {fail_count} failed")
+    logger.info(f" Directory creation complete: {success_count} success, {fail_count} failed")
     
     if fail_count > 0:
         raise Exception(f"Failed to create {fail_count} directories")
@@ -93,7 +93,7 @@ def initialize_hdfs_structure(**context):
 
 def set_permissions(**context):
     """Set 777 permissions on root directories."""
-    logger.info("🔐 Setting HDFS permissions...")
+    logger.info(" Setting HDFS permissions...")
     
     root_dirs = ["/raw", "/processed", "/output", "/logs"]
     
@@ -113,18 +113,18 @@ def verify_hdfs_structure(**context):
         try:
             response = requests.get(url, timeout=30)
             if response.status_code == 200:
-                logger.info(f"✅ Verified: {directory}")
+                logger.info(f" Verified: {directory}")
             else:
-                logger.error(f"❌ Missing: {directory}")
+                logger.error(f" Missing: {directory}")
                 missing.append(directory)
         except Exception as e:
-            logger.error(f"❌ Error checking {directory}: {str(e)}")
+            logger.error(f" Error checking {directory}: {str(e)}")
             missing.append(directory)
     
     if missing:
         raise Exception(f"Missing directories: {missing}")
     
-    logger.info("✅ All HDFS directories verified successfully!")
+    logger.info(" All HDFS directories verified successfully!")
     return "All directories verified"
 
 

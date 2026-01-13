@@ -114,7 +114,7 @@ def execute_ddl(statement_name: str, **context):
     if not ddl:
         raise ValueError(f"Unknown DDL statement: {statement_name}")
     
-    logger.info(f"🚀 Executing DDL: {statement_name}")
+    logger.info(f" Executing DDL: {statement_name}")
     
     conn = get_trino_connection()
     cursor = conn.cursor()
@@ -127,10 +127,10 @@ def execute_ddl(statement_name: str, **context):
         except:
             pass  # Some DDL statements don't return results
         
-        logger.info(f"✅ Successfully executed: {statement_name}")
+        logger.info(f" Successfully executed: {statement_name}")
         return f"Created: {statement_name}"
     except Exception as e:
-        logger.error(f"❌ Failed to execute {statement_name}: {str(e)}")
+        logger.error(f"Failed to execute {statement_name}: {str(e)}")
         raise
     finally:
         cursor.close()
@@ -139,7 +139,7 @@ def execute_ddl(statement_name: str, **context):
 
 def verify_tables(**context):
     """Verify all tables were created successfully."""
-    logger.info("🔍 Verifying table creation...")
+    logger.info("Verifying table creation...")
     
     conn = get_trino_connection()
     cursor = conn.cursor()
@@ -154,17 +154,15 @@ def verify_tables(**context):
         if missing:
             raise Exception(f"Missing tables: {missing}")
         
-        logger.info(f"✅ All tables verified: {tables}")
+        logger.info(f" All tables verified: {tables}")
         return f"Verified tables: {tables}"
     finally:
         cursor.close()
         conn.close()
 
 
-# =============================================================================
-# DAG Definition
-# =============================================================================
 
+# DAG Definition
 with DAG(
     'trino_init_tables',
     default_args=default_args,

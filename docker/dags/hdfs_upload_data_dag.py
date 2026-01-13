@@ -46,10 +46,8 @@ SAMPLE_DATES = [TODAY]
 LOCAL_DATA_PATH = "/opt/airflow/data"
 
 
-# =============================================================================
-# Data Models (inline to avoid import issues in Airflow container)
-# =============================================================================
 
+# Data Models (inline to avoid import issues in Airflow container)
 @dataclass
 class Order:
     """Represents a purchase order in the procurement system."""
@@ -90,10 +88,8 @@ class InventorySnapshot:
         }
 
 
-# =============================================================================
-# Data Generation Functions
-# =============================================================================
 
+# Data Generation Functions
 def generate_orders(exec_date: date, num_orders: int = 100) -> List[Order]:
     """Generate daily purchase orders with valid foreign keys."""
     orders = []
@@ -108,7 +104,6 @@ def generate_orders(exec_date: date, num_orders: int = 100) -> List[Order]:
         )
         orders.append(order)
     return orders
-
 
 def generate_inventory(exec_date: date) -> List[InventorySnapshot]:
     """Generate daily inventory snapshots for all products."""
@@ -126,10 +121,8 @@ def generate_inventory(exec_date: date) -> List[InventorySnapshot]:
     return snapshots
 
 
-# =============================================================================
-# CSV Save Functions
-# =============================================================================
 
+# CSV Save Functions
 def save_to_csv(data: List, data_type: str, exec_date: str) -> str:
     """
     Save data to local CSV file before Parquet conversion.
@@ -162,10 +155,8 @@ def save_to_csv(data: List, data_type: str, exec_date: str) -> str:
     return csv_path
 
 
-# =============================================================================
-# Parquet Creation Functions
-# =============================================================================
 
+# Parquet Creation Functions
 def create_parquet_buffer(data: List, data_type: str) -> bytes:
     """Convert data objects to Parquet bytes using PyArrow."""
     import pandas as pd
@@ -183,14 +174,12 @@ def create_parquet_buffer(data: List, data_type: str) -> bytes:
     pq.write_table(table, buffer, compression='snappy')
     buffer.seek(0)
     
-    logger.info(f"📦 Created {data_type} Parquet: {len(data)} records, {len(buffer.getvalue())} bytes")
+    logger.info(f" Created {data_type} Parquet: {len(data)} records, {len(buffer.getvalue())} bytes")
     return buffer.getvalue()
 
 
-# =============================================================================
-# WebHDFS Upload Functions
-# =============================================================================
 
+# WebHDFS Upload Functions
 def upload_to_hdfs(hdfs_path: str, data: bytes) -> bool:
     """
     Upload data to HDFS using WebHDFS REST API (two-step process).
@@ -209,7 +198,7 @@ def upload_to_hdfs(hdfs_path: str, data: bytes) -> bool:
             # Get the DataNode URL from Location header
             datanode_url = response.headers.get('Location')
             if not datanode_url:
-                logger.error(f"❌ No redirect location for {hdfs_path}")
+                logger.error(f" No redirect location for {hdfs_path}")
                 return False
             
             # Step 2: Upload data to DataNode
@@ -221,20 +210,19 @@ def upload_to_hdfs(hdfs_path: str, data: bytes) -> bool:
             )
             
             if upload_response.status_code == 201:
-                logger.info(f"✅ Uploaded to HDFS: {hdfs_path}")
+                logger.info(f" Uploaded to HDFS: {hdfs_path}")
                 return True
             else:
-                logger.error(f"❌ Upload failed for {hdfs_path}: HTTP {upload_response.status_code}")
+                logger.error(f" Upload failed for {hdfs_path}: HTTP {upload_response.status_code}")
                 logger.error(f"   Response: {upload_response.text}")
                 return False
         else:
-            logger.error(f"❌ CREATE failed for {hdfs_path}: HTTP {response.status_code}")
+            logger.error(f" CREATE failed for {hdfs_path}: HTTP {response.status_code}")
             return False
             
     except Exception as e:
-        logger.error(f"❌ Error uploading {hdfs_path}: {str(e)}")
+        logger.error(f" Error uploading {hdfs_path}: {str(e)}")
         return False
-
 
 def verify_hdfs_file(hdfs_path: str) -> bool:
     """Verify file exists in HDFS."""
@@ -244,28 +232,28 @@ def verify_hdfs_file(hdfs_path: str) -> bool:
         if response.status_code == 200:
             file_status = response.json().get('FileStatus', {})
             file_size = file_status.get('length', 0)
-            logger.info(f"✅ Verified {hdfs_path}: {file_size} bytes")
+            logger.info(f" Verified {hdfs_path}: {file_size} bytes")
             return True
         return False
     except Exception as e:
-        logger.error(f"❌ Verification failed for {hdfs_path}: {str(e)}")
+        logger.error(f" Verification failed for {hdfs_path}: {str(e)}")
         return False
 
 
-# =============================================================================
+
 # Main Task Functions
-# =============================================================================
+
 
 def generate_and_upload_orders(**context):
     """Generate orders for all sample dates, save to CSV, and upload to HDFS."""
-    logger.info("📦 Starting Orders Generation and Upload...")
+    logger.info(" Starting Orders Generation and Upload...")
     
     success_count = 0
     fail_count = 0
     
     for date_str in SAMPLE_DATES:
         exec_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        logger.info(f"\n📅 Processing orders for: {date_str}")
+        logger.info(f"\n Processing orders for: {date_str}")
         
         # Generate orders
         orders = generate_orders(exec_date, num_orders=1000)
@@ -273,7 +261,7 @@ def generate_and_upload_orders(**context):
         
         # Step 1: Save to local CSV file
         csv_path = save_to_csv(orders, "orders", date_str)
-        logger.info(f"   📁 Saved to local CSV: {csv_path}")
+        logger.info(f" Saved to local CSV: {csv_path}")
         
         # Step 2: Convert to Parquet
         parquet_data = create_parquet_buffer(orders, "orders")
@@ -285,7 +273,7 @@ def generate_and_upload_orders(**context):
         else:
             fail_count += 1
     
-    logger.info(f"\n📊 Orders upload complete: {success_count} success, {fail_count} failed")
+    logger.info(f"\n Orders upload complete: {success_count} success, {fail_count} failed")
     
     if fail_count > 0:
         raise Exception(f"Failed to upload {fail_count} order files")
@@ -295,14 +283,14 @@ def generate_and_upload_orders(**context):
 
 def generate_and_upload_inventory(**context):
     """Generate inventory snapshots for all sample dates, save to CSV, and upload to HDFS."""
-    logger.info("🛒 Starting Inventory Generation and Upload...")
+    logger.info("Starting Inventory Generation and Upload...")
     
     success_count = 0
     fail_count = 0
     
     for date_str in SAMPLE_DATES:
         exec_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        logger.info(f"\n📅 Processing inventory for: {date_str}")
+        logger.info(f"\n Processing inventory for: {date_str}")
         
         # Generate inventory snapshots
         inventory = generate_inventory(exec_date)
@@ -310,7 +298,7 @@ def generate_and_upload_inventory(**context):
         
         # Step 1: Save to local CSV file
         csv_path = save_to_csv(inventory, "stock", date_str)
-        logger.info(f"   📁 Saved to local CSV: {csv_path}")
+        logger.info(f"Saved to local CSV: {csv_path}")
         
         # Step 2: Convert to Parquet
         parquet_data = create_parquet_buffer(inventory, "inventory")
@@ -322,7 +310,7 @@ def generate_and_upload_inventory(**context):
         else:
             fail_count += 1
     
-    logger.info(f"\n📊 Inventory upload complete: {success_count} success, {fail_count} failed")
+    logger.info(f"\n Inventory upload complete: {success_count} success, {fail_count} failed")
     
     if fail_count > 0:
         raise Exception(f"Failed to upload {fail_count} inventory files")
@@ -347,18 +335,18 @@ def verify_all_uploads(**context):
     if missing:
         raise Exception(f"Missing files: {missing}")
     
-    logger.info(f"✅ All {len(all_files)} files verified successfully!")
+    logger.info(f" All {len(all_files)} files verified successfully!")
     return f"Verified {len(all_files)} files"
 
 
 def print_summary(**context):
     """Print summary of uploaded data."""
     logger.info("\n" + "="*60)
-    logger.info("📋 UPLOAD SUMMARY")
+    logger.info("UPLOAD SUMMARY")
     logger.info("="*60)
     
     for date_str in SAMPLE_DATES:
-        logger.info(f"\n📅 Date: {date_str}")
+        logger.info(f"\n Date: {date_str}")
         
         # Check orders
         orders_path = f"/raw/orders/{date_str}/data.parquet"
@@ -367,7 +355,7 @@ def print_summary(**context):
             response = requests.get(url, timeout=30)
             if response.status_code == 200:
                 size = response.json().get('FileStatus', {}).get('length', 0)
-                logger.info(f"   📦 Orders: {orders_path} ({size:,} bytes)")
+                logger.info(f"    Orders: {orders_path} ({size:,} bytes)")
         except:
             pass
         
@@ -378,12 +366,12 @@ def print_summary(**context):
             response = requests.get(url, timeout=30)
             if response.status_code == 200:
                 size = response.json().get('FileStatus', {}).get('length', 0)
-                logger.info(f"   🛒 Stock:  {stock_path} ({size:,} bytes)")
+                logger.info(f"   Stock:  {stock_path} ({size:,} bytes)")
         except:
             pass
     
     logger.info("\n" + "="*60)
-    logger.info("✅ Step 4 Complete! Data uploaded and partitions synced.")
+    logger.info(" Step 4 Complete! Data uploaded and partitions synced.")
     logger.info("   Trino tables are ready for queries.")
     logger.info("="*60)
     
@@ -397,7 +385,7 @@ def sync_hive_partitions(**context):
     """
     from trino.dbapi import connect
     
-    logger.info("🔄 Syncing Hive partitions with HDFS...")
+    logger.info("Syncing Hive partitions with HDFS...")
     
     conn = connect(
         host=TRINO_HOST,
@@ -423,9 +411,9 @@ def sync_hive_partitions(**context):
             cursor.execute(sync_query)
             cursor.fetchall()  # Complete the query
             synced.append(f"{schema}.{table}")
-            logger.info(f"   ✅ Synced {schema}.{table}")
+            logger.info(f"    Synced {schema}.{table}")
         except Exception as e:
-            logger.error(f"   ❌ Failed to sync {schema}.{table}: {str(e)}")
+            logger.error(f"    Failed to sync {schema}.{table}: {str(e)}")
             failed.append(f"{schema}.{table}")
     
     cursor.close()
@@ -438,10 +426,8 @@ def sync_hive_partitions(**context):
     return f"Synced partitions for {len(synced)} tables"
 
 
-# =============================================================================
-# DAG Definition
-# =============================================================================
 
+# DAG Definition
 with DAG(
     'hdfs_upload_sample_data',
     default_args=default_args,

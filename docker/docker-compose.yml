@@ -46,17 +46,7 @@ services:
     networks:
       - procurement-net
 
-  # --- METADATA LAYER (DISABLED - Using Trino File-Based Metastore) ---
-  # The following services are commented out because we use Trino's file-based
-  # metastore which stores metadata directly in HDFS, eliminating the need for
-  # an external Hive Metastore service. This avoids SocketTimeoutException issues.
-  
-  # metastore-db: (DISABLED)
-  # hive-metastore: (DISABLED)
-  # hive-server: (DISABLED)
-
   # --- RELATIONAL LAYER (MASTER DATA) ---
-  # Stores Product and Supplier attributes as the OLTP source [cite: 40, 256]
   postgres-main:
     image: postgres:13
     container_name: postgres-main
@@ -94,8 +84,7 @@ services:
       - procurement-net
 
   # --- COMPUTE ENGINE (TRINO) ---
-  # Federated engine to calculate Net Demand [cite: 31, 254]
-  # Uses file-based metastore (no Hive Metastore dependency)
+
   trino:
     image: trinodb/trino:latest
     container_name: trino
@@ -114,7 +103,7 @@ services:
       - procurement-net
 
   # --- ORCHESTRATION LAYER (AIRFLOW) ---
-  # Orchestrates ingestion, computation, and extraction steps [cite: 231]
+
   airflow-db:
     image: postgres:13
     container_name: airflow-db
@@ -189,12 +178,7 @@ services:
     networks:
       - procurement-net
 
-  # --- SCHEMA INITIALIZATION ---
-  # Table creation is now handled by Airflow DAG: trino_init_tables_dag.py
-  # Trigger it manually from Airflow UI after infrastructure is up.
-
   # --- VISUALIZATION LAYER (METABASE) ---
-  # Provides the Manager View for Procurement KPIs [cite: 157]
   metabase:
     image: metabase/metabase:latest
     container_name: metabase

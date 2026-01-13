@@ -48,13 +48,13 @@ def wait_for_metabase(**context):
         try:
             response = requests.get(f"{METABASE_URL}/api/health", timeout=5)
             if response.status_code == 200:
-                logger.info("✅ Metabase is ready!")
+                logger.info(" Metabase is ready!")
                 return True
         except Exception as e:
             logger.info(f"   Attempt {i+1}/{max_attempts}: Metabase not ready yet...")
             time.sleep(10)
     
-    raise Exception("❌ Metabase did not become ready in time")
+    raise Exception(" Metabase did not become ready in time")
 
 
 def setup_metabase_initial(**context):
@@ -92,16 +92,16 @@ def setup_metabase_initial(**context):
             )
             
             if setup_response.status_code in [200, 201, 204]:
-                logger.info("✅ Metabase initial setup complete!")
+                logger.info(" Metabase initial setup complete!")
                 return True
             else:
                 logger.warning(f"⚠️ Setup response: {setup_response.status_code}")
         else:
-            logger.info("✅ Metabase already configured")
+            logger.info(" Metabase already configured")
             return True
             
     except Exception as e:
-        logger.error(f"❌ Setup error: {str(e)}")
+        logger.error(f" Setup error: {str(e)}")
         raise
 
 
@@ -123,7 +123,7 @@ def get_session_token(**context):
             
             if response.status_code == 200:
                 token = response.json().get('id')
-                logger.info("✅ Login successful!")
+                logger.info(" Login successful!")
                 context['ti'].xcom_push(key='session_token', value=token)
                 return token
             else:
@@ -134,7 +134,7 @@ def get_session_token(**context):
             logger.warning(f"Attempt {attempt+1}: {str(e)}")
             time.sleep(5)
     
-    raise Exception("❌ Could not login to Metabase")
+    raise Exception(" Could not login to Metabase")
 
 
 def create_trino_database(**context):
@@ -151,7 +151,7 @@ def create_trino_database(**context):
         
         for db in databases:
             if db.get('name') == 'Procurement Trino':
-                logger.info(f"✅ Trino database already exists (ID: {db['id']})")
+                logger.info(f" Trino database already exists (ID: {db['id']})")
                 context['ti'].xcom_push(key='database_id', value=db['id'])
                 return db['id']
     except Exception as e:
@@ -183,7 +183,7 @@ def create_trino_database(**context):
         
         if response.status_code in [200, 201]:
             db_id = response.json().get('id')
-            logger.info(f"✅ Trino database created (ID: {db_id})")
+            logger.info(f" Trino database created (ID: {db_id})")
             
             # Sync database schema
             sync_response = requests.post(
@@ -196,11 +196,11 @@ def create_trino_database(**context):
             context['ti'].xcom_push(key='database_id', value=db_id)
             return db_id
         else:
-            logger.error(f"❌ Failed to create database: {response.text}")
+            logger.error(f" Failed to create database: {response.text}")
             raise Exception("Database creation failed")
             
     except Exception as e:
-        logger.error(f"❌ Error creating database: {str(e)}")
+        logger.error(f" Error creating database: {str(e)}")
         raise
 
 
@@ -232,12 +232,12 @@ def create_dashboard_cards(**context):
             existing = [d for d in dashboards if d.get('name') == 'Procurement KPI Dashboard']
             if existing:
                 dashboard_id = existing[0]['id']
-                logger.info(f"✅ Using existing dashboard (ID: {dashboard_id})")
+                logger.info(f" Using existing dashboard (ID: {dashboard_id})")
             else:
                 raise Exception("Could not create or find dashboard")
         else:
             dashboard_id = dash_response.json().get('id')
-            logger.info(f"✅ Dashboard created (ID: {dashboard_id})")
+            logger.info(f" Dashboard created (ID: {dashboard_id})")
         
         # Define KPI queries
         queries = [
@@ -250,8 +250,9 @@ def create_dashboard_cards(**context):
                     "type": "native",
                     "native": {
                         "query": """SELECT SUM(total_quantity) as total_daily_orders
-FROM hive.procurement_raw.aggregated_orders 
-WHERE order_date = (SELECT MAX(order_date) FROM hive.procurement_raw.aggregated_orders)"""
+                    FROM hive.procurement_raw.aggregated_orders 
+                    WHERE order_date = (SELECT MAX(order_date) 
+                    FROM hive.procurement_raw.aggregated_orders)"""
                     }
                 }
             },
@@ -264,9 +265,10 @@ WHERE order_date = (SELECT MAX(order_date) FROM hive.procurement_raw.aggregated_
                     "type": "native",
                     "native": {
                         "query": """SELECT product_name, net_demand
-FROM hive.procurement_raw.net_demand 
-WHERE net_demand > 0 AND calculation_date = (SELECT MAX(calculation_date) FROM hive.procurement_raw.net_demand)
-ORDER BY net_demand DESC"""
+                    FROM hive.procurement_raw.net_demand 
+                    WHERE net_demand > 0 AND calculation_date = (SELECT MAX(calculation_date) 
+                    FROM hive.procurement_raw.net_demand)
+                    ORDER BY net_demand DESC"""
                     }
                 }
             },
@@ -279,10 +281,11 @@ ORDER BY net_demand DESC"""
                     "type": "native",
                     "native": {
                         "query": """SELECT supplier_name, SUM(net_demand) as total_demand
-FROM hive.procurement_raw.net_demand
-WHERE calculation_date = (SELECT MAX(calculation_date) FROM hive.procurement_raw.net_demand)
-GROUP BY supplier_name
-ORDER BY total_demand DESC"""
+                    FROM hive.procurement_raw.net_demand
+                    WHERE calculation_date = (SELECT MAX(calculation_date) 
+                    FROM hive.procurement_raw.net_demand)
+                    GROUP BY supplier_name
+                    ORDER BY total_demand DESC"""
                     }
                 }
             },
@@ -307,8 +310,9 @@ ORDER BY total_demand DESC"""
                     "type": "native",
                     "native": {
                         "query": """SELECT CAST(SUM(estimated_cost) AS DECIMAL(12,2)) as total_procurement_cost
-FROM hive.procurement_raw.net_demand
-WHERE calculation_date = (SELECT MAX(calculation_date) FROM hive.procurement_raw.net_demand)"""
+                    FROM hive.procurement_raw.net_demand
+                    WHERE calculation_date = (SELECT MAX(calculation_date) 
+                    FROM hive.procurement_raw.net_demand)"""
                     }
                 }
             }
@@ -336,7 +340,7 @@ WHERE calculation_date = (SELECT MAX(calculation_date) FROM hive.procurement_raw
                 if card_response.status_code in [200, 201]:
                     card_id = card_response.json().get('id')
                     card_ids.append(card_id)
-                    logger.info(f"   ✅ Created card: {query_config['name']} (ID: {card_id})")
+                    logger.info(f"Created card: {query_config['name']} (ID: {card_id})")
                     
                     # Add card to dashboard
                     dashcard_data = {
@@ -354,25 +358,22 @@ WHERE calculation_date = (SELECT MAX(calculation_date) FROM hive.procurement_raw
                         timeout=10
                     )
                 else:
-                    logger.warning(f"   ⚠️ Could not create card: {query_config['name']}")
+                    logger.warning(f"Could not create card: {query_config['name']}")
                     
             except Exception as e:
-                logger.warning(f"   ⚠️ Error creating card {query_config['name']}: {str(e)}")
+                logger.warning(f"Error creating card {query_config['name']}: {str(e)}")
         
-        logger.info(f"✅ Created {len(card_ids)} dashboard cards")
-        logger.info(f"🎉 Dashboard URL: http://localhost:3000/dashboard/{dashboard_id}")
+        logger.info(f" Created {len(card_ids)} dashboard cards")
+        logger.info(f"Dashboard URL: http://localhost:3000/dashboard/{dashboard_id}")
         
         return dashboard_id
         
     except Exception as e:
-        logger.error(f"❌ Error creating dashboard: {str(e)}")
+        logger.error(f" Error creating dashboard: {str(e)}")
         raise
 
 
-# =============================================================================
 # DAG Definition
-# =============================================================================
-
 with DAG(
     'metabase_setup_dashboard',
     default_args=default_args,

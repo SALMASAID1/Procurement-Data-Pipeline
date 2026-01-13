@@ -1,6 +1,0 @@
-product_id,available_qty,reserved_qty,safety_stock,snapshot_date,warehouse_id
-1,99,0,98,2026-01-13,1
-2,376,37,92,2026-01-13,1
-3,88,28,22,2026-01-13,1
-4,456,1,21,2026-01-13,1
-5,70,2,97,2026-01-13,1

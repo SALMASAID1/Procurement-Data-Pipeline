@@ -1,6 +1,6 @@
 """
 Procurement Pipeline DAG - Full Implementation
-Runs daily at 22:00 per PDF requirement
+Runs daily at 22:00 
 
 This DAG implements the complete procurement data pipeline:
 1. Sync Hive partitions with HDFS
@@ -30,10 +30,8 @@ default_args = {
 }
 
 
-# =============================================================================
-# Task Functions
-# =============================================================================
 
+# Task Functions
 def task_sync_partitions(**context):
     """Sync Hive partitions with HDFS before processing."""
     logger.info("Syncing Hive partitions...")
@@ -316,14 +314,12 @@ def task_copy_to_processed(exec_date: str, **context):
     return f"Copied {copied_files} Parquet, uploaded {uploaded_json} JSON, {uploaded_logs} logs"
 
 
-# =============================================================================
-# DAG Definition
-# =============================================================================
 
+# DAG Definition
 with DAG(
     'procurement_pipeline',
     default_args=default_args,
-    schedule_interval='0 22 * * *',  # 22:00 daily per PDF requirement
+    schedule_interval='0 22 * * *',  # 22:00 daily 
     start_date=days_ago(0),  # Start from today
     catchup=False,
     description='Daily procurement pipeline - runs at 22:00 ',
@@ -333,7 +329,7 @@ with DAG(
     dag.doc_md = """
     ## Procurement Pipeline DAG
     
-    **Schedule:** Daily at 22:00 (per PDF requirement)
+    **Schedule:** Daily at 22:00 
     
     ### Pipeline Steps:
     1. **sync_partitions** - Sync Hive metastore with HDFS
