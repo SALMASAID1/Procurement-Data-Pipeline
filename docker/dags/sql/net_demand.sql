@@ -1,8 +1,5 @@
--- ============================================================
 -- NET DEMAND CALCULATION (MRP – PRODUCTION SAFE VERSION)
--- Author: Tamzirt Mohamed
 -- Formula: max(0, Orders + Safety Stock - (Available - Reserved))
--- ============================================================
 
 WITH daily_orders AS (
     SELECT 

@@ -154,7 +154,7 @@ def verify_tables(**context):
         if missing:
             raise Exception(f"Missing tables: {missing}")
         
-        logger.info(f" All tables verified: {tables}")
+        logger.info(f"All tables verified: {tables}")
         return f"Verified tables: {tables}"
     finally:
         cursor.close()

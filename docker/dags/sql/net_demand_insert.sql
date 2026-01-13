@@ -1,7 +1,5 @@
--- ============================================================
 -- NET DEMAND INSERT (Persists to net_demand table)
 -- Formula: max(0, Orders + Safety Stock - (Available - Reserved))
--- ============================================================
 
 INSERT INTO hive.procurement_raw.net_demand
 WITH daily_orders AS (

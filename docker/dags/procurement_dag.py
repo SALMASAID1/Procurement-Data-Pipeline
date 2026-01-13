@@ -276,7 +276,7 @@ def task_copy_to_processed(exec_date: str, **context):
                         copied_files += 1
                         logger.info(f"    Copied {filename}")
         except Exception as e:
-            logger.warning(f"   Could not copy to {copy_spec['dest']}: {e}")
+            logger.warning(f"Could not copy to {copy_spec['dest']}: {e}")
     
     # 2. Upload supplier JSON files to HDFS /output/supplier_orders/
     json_dir = f"/opt/airflow/data/output/supplier_orders/{exec_date}"

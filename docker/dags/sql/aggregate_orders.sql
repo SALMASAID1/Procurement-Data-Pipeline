@@ -1,8 +1,4 @@
--- ============================================================
--- AGGREGATED ORDERS ETL
--- Task 3.1: Aggregate daily orders per product
--- Author: Data Engineering Team
--- ============================================================
+-- AGGREGATED ORDERS
 
 -- This query aggregates orders per product for a given date
 -- Results are inserted into the aggregated_orders table

@@ -151,7 +151,7 @@ def save_to_csv(data: List, data_type: str, exec_date: str) -> str:
     df = pd.DataFrame(records)
     df.to_csv(csv_path, index=False)
     
-    logger.info(f"💾 Saved CSV: {csv_path} ({len(data)} records)")
+    logger.info(f"Saved CSV: {csv_path} ({len(data)} records)")
     return csv_path
 
 
@@ -243,7 +243,6 @@ def verify_hdfs_file(hdfs_path: str) -> bool:
 
 # Main Task Functions
 
-
 def generate_and_upload_orders(**context):
     """Generate orders for all sample dates, save to CSV, and upload to HDFS."""
     logger.info(" Starting Orders Generation and Upload...")
@@ -320,7 +319,7 @@ def generate_and_upload_inventory(**context):
 
 def verify_all_uploads(**context):
     """Verify all files were uploaded successfully."""
-    logger.info("🔍 Verifying all uploads...")
+    logger.info("Verifying all uploads...")
     
     all_files = []
     for date_str in SAMPLE_DATES:
@@ -409,7 +408,7 @@ def sync_hive_partitions(**context):
             sync_query = f"CALL hive.system.sync_partition_metadata('{schema}', '{table}', 'ADD')"
             logger.info(f"   Syncing {schema}.{table}...")
             cursor.execute(sync_query)
-            cursor.fetchall()  # Complete the query
+            cursor.fetchall()  
             synced.append(f"{schema}.{table}")
             logger.info(f"    Synced {schema}.{table}")
         except Exception as e:
@@ -422,7 +421,7 @@ def sync_hive_partitions(**context):
     if failed:
         raise Exception(f"Failed to sync partitions for: {failed}")
     
-    logger.info(f"🎉 Successfully synced partitions for: {synced}")
+    logger.info(f"Successfully synced partitions for: {synced}")
     return f"Synced partitions for {len(synced)} tables"
 
 
@@ -448,7 +447,7 @@ with DAG(
     **What it does:**
     1. Generates 1000 purchase orders per date
     2. Generates 5 inventory snapshots per date (one per product)
-    3. **Saves data to local CSV files** (for backup/reference)
+    3. **Saves data to local CSV files** 
     4. Converts data to Parquet format (Snappy compression)
     5. Uploads to HDFS via WebHDFS API
     6. **Automatically syncs Hive partitions with Trino**

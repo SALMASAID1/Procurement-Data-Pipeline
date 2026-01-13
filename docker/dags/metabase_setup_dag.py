@@ -41,7 +41,7 @@ TRINO_SCHEMA = "procurement_raw"
 
 def wait_for_metabase(**context):
     """Wait for Metabase to be ready."""
-    logger.info("⏳ Waiting for Metabase to be ready...")
+    logger.info("Waiting for Metabase to be ready...")
     max_attempts = 30
     
     for i in range(max_attempts):
@@ -67,7 +67,7 @@ def setup_metabase_initial(**context):
         data = response.json()
         
         if data.get('setup-token'):
-            logger.info("📝 Completing initial Metabase setup...")
+            logger.info("Completing initial Metabase setup...")
             
             setup_data = {
                 "token": data['setup-token'],
@@ -95,7 +95,7 @@ def setup_metabase_initial(**context):
                 logger.info(" Metabase initial setup complete!")
                 return True
             else:
-                logger.warning(f"⚠️ Setup response: {setup_response.status_code}")
+                logger.warning(f"Setup response: {setup_response.status_code}")
         else:
             logger.info(" Metabase already configured")
             return True
@@ -107,7 +107,7 @@ def setup_metabase_initial(**context):
 
 def get_session_token(**context):
     """Login to Metabase and get session token."""
-    logger.info("🔐 Logging in to Metabase...")
+    logger.info("Logging in to Metabase...")
     
     max_attempts = 5
     for attempt in range(max_attempts):
@@ -158,7 +158,6 @@ def create_trino_database(**context):
         logger.warning(f"Could not check existing databases: {e}")
     
     # Create new database connection
-    # Using 'starburst' engine which has better Trino compatibility
     database_config = {
         "name": "Procurement Trino",
         "engine": "starburst",
@@ -191,7 +190,7 @@ def create_trino_database(**context):
                 headers=headers,
                 timeout=60
             )
-            logger.info("🔄 Database schema sync initiated")
+            logger.info("Database schema sync initiated")
             
             context['ti'].xcom_push(key='database_id', value=db_id)
             return db_id
@@ -206,7 +205,7 @@ def create_trino_database(**context):
 
 def create_dashboard_cards(**context):
     """Create dashboard with KPI cards."""
-    logger.info("📊 Creating dashboard and cards...")
+    logger.info("Creating dashboard and cards...")
     
     token = context['ti'].xcom_pull(key='session_token', task_ids='login_metabase')
     database_id = context['ti'].xcom_pull(key='database_id', task_ids='create_database')

@@ -72,7 +72,7 @@ def set_hdfs_permissions(path: str, permission: str = "777") -> bool:
 
 def initialize_hdfs_structure(**context):
     """Create all required HDFS directories."""
-    logger.info("🚀 Starting HDFS directory initialization...")
+    logger.info("Starting HDFS directory initialization...")
     
     success_count = 0
     fail_count = 0
@@ -105,7 +105,7 @@ def set_permissions(**context):
 
 def verify_hdfs_structure(**context):
     """Verify all directories exist using WebHDFS."""
-    logger.info("🔍 Verifying HDFS structure...")
+    logger.info("Verifying HDFS structure...")
     
     missing = []
     for directory in HDFS_DIRECTORIES:

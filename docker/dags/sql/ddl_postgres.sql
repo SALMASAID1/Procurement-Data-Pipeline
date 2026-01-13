@@ -4,9 +4,7 @@
 -- Create schema
 CREATE SCHEMA IF NOT EXISTS master_data;
  
--- =====================================================
 -- PRODUCTS TABLE
--- =====================================================
 CREATE TABLE IF NOT EXISTS master_data.products (
     product_id SERIAL PRIMARY KEY,
     product_name VARCHAR(255) NOT NULL,
@@ -20,9 +18,7 @@ CREATE TABLE IF NOT EXISTS master_data.products (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
 -- SUPPLIERS TABLE
--- =====================================================
 CREATE TABLE IF NOT EXISTS master_data.suppliers (
     supplier_id SERIAL PRIMARY KEY,
     supplier_name VARCHAR(255) NOT NULL,
@@ -35,9 +31,7 @@ CREATE TABLE IF NOT EXISTS master_data.suppliers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
 -- PRODUCT-SUPPLIER MAPPING
--- =====================================================
 CREATE TABLE IF NOT EXISTS master_data.product_suppliers (
     product_id INT REFERENCES master_data.products(product_id),
     supplier_id INT REFERENCES master_data.suppliers(supplier_id),
@@ -47,17 +41,13 @@ CREATE TABLE IF NOT EXISTS master_data.product_suppliers (
     PRIMARY KEY (product_id, supplier_id)
 );
 
--- =====================================================
 -- INDEXES FOR PERFORMANCE
--- =====================================================
 CREATE INDEX IF NOT EXISTS idx_products_category ON master_data.products(category);
 CREATE INDEX IF NOT EXISTS idx_products_active ON master_data.products(is_active);
 CREATE INDEX IF NOT EXISTS idx_suppliers_active ON master_data.suppliers(is_active);
 CREATE INDEX IF NOT EXISTS idx_ps_priority ON master_data.product_suppliers(priority);
 
--- =====================================================
 -- SAMPLE DATA
--- =====================================================
 INSERT INTO master_data.products 
     (product_id, product_name, product_code, category, unit_price, safety_stock_level)
 VALUES 
