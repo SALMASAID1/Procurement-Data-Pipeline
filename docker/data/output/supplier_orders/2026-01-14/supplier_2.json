@@ -1,0 +1,24 @@
+{
+  "supplier_id": 2,
+  "supplier_name": "Global Parts Inc",
+  "order_date": "2026-01-14",
+  "data_date": "2026-01-13",
+  "generated_at": "2026-01-13T20:19:56.785909",
+  "items": [
+    {
+      "product_id": 3,
+      "product_name": "Component X",
+      "quantity": 11840,
+      "unit_cost": 10.0,
+      "total_cost": 118400.0
+    },
+    {
+      "product_id": 4,
+      "product_name": "Component Y",
+      "quantity": 9588,
+      "unit_cost": 15.0,
+      "total_cost": 143820.0
+    }
+  ],
+  "total_estimated_cost": 262220.0
+}

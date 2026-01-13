@@ -81,7 +81,7 @@ services:
       postgres-main:
         condition: service_healthy
     volumes:
-      - ./src/sql:/sql:ro
+      - ./dags/sql:/sql:ro
     environment:
       - PGPASSWORD=admin
     command: >
@@ -160,7 +160,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./data:/opt/airflow/data
-      - ./src/sql:/opt/airflow/sql
+      - ./dags/sql:/opt/airflow/sql
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
@@ -181,7 +181,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./data:/opt/airflow/data
-      - ./src/sql:/opt/airflow/sql
+      - ./dags/sql:/opt/airflow/sql
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
       - _PIP_ADDITIONAL_REQUIREMENTS=trino

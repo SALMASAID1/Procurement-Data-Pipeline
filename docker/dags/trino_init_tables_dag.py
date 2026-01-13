@@ -41,7 +41,6 @@ DDL_STATEMENTS = {
             order_id BIGINT,
             product_id INTEGER,
             quantity INTEGER,
-            supplier_id INTEGER,
             status VARCHAR(20),
             order_date DATE
         )
