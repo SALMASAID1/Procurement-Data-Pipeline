@@ -217,7 +217,6 @@ Procurement-Data-Pipeline/
 │   │   │   ├── net_demand.sql          # MRP calculation
 │   │   │   └── net_demand_insert.sql   # Insert results
 │   │   └── utils/                      # Helper modules
-│   │       ├── hdfs_helper.py          # HDFS operations
 │   │       └── trino_client.py         # Trino connection
 │   ├── data/                           # Runtime data (mounted)
 │   │   ├── raw/                        # Generated CSV files
@@ -237,8 +236,6 @@ Procurement-Data-Pipeline/
 │   │       └── postgres.properties     # PostgreSQL catalog
 │   ├── metabase-data/                  # Metabase persistence
 │   └── docker-compose.yml              # Service definitions
-├── docs/
-│   └── task_distribution.tex           # Project documentation
 ├── requirements.txt
 └── README.md
 ```
