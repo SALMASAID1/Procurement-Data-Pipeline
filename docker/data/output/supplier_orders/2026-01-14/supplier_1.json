@@ -1,0 +1,24 @@
+{
+  "supplier_id": 1,
+  "supplier_name": "TechSupply Co",
+  "order_date": "2026-01-14",
+  "data_date": "2026-01-13",
+  "generated_at": "2026-01-13T20:19:56.785841",
+  "items": [
+    {
+      "product_id": 2,
+      "product_name": "Widget B",
+      "quantity": 9877,
+      "unit_cost": 35.0,
+      "total_cost": 345695.0
+    },
+    {
+      "product_id": 1,
+      "product_name": "Widget A",
+      "quantity": 8864,
+      "unit_cost": 20.0,
+      "total_cost": 177280.0
+    }
+  ],
+  "total_estimated_cost": 522975.0
+}

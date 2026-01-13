@@ -15,6 +15,7 @@ import requests
 import logging
 import random
 import io
+import os
 from dataclasses import dataclass
 from typing import List
 
@@ -36,11 +37,13 @@ TRINO_USER = "airflow"
 
 # Configuration - Must match PostgreSQL master data
 VALID_PRODUCT_IDS = [1, 2, 3, 4, 5]
-VALID_SUPPLIER_IDS = [1, 2, 3]
 ORDER_STATUS = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"]
 
 TODAY = datetime.now().strftime("%Y-%m-%d")
 SAMPLE_DATES = [TODAY]
+
+# Local data path for CSV files
+LOCAL_DATA_PATH = "/opt/airflow/data"
 
 
 # =============================================================================
@@ -54,7 +57,6 @@ class Order:
     product_id: int
     quantity: int
     order_date: date
-    supplier_id: int
     status: str = "PENDING"
     
     def to_dict(self) -> dict:
@@ -63,7 +65,6 @@ class Order:
             'product_id': self.product_id,
             'quantity': self.quantity,
             'order_date': self.order_date.isoformat(),
-            'supplier_id': self.supplier_id,
             'status': self.status
         }
 
@@ -103,7 +104,6 @@ def generate_orders(exec_date: date, num_orders: int = 100) -> List[Order]:
             product_id=random.choice(VALID_PRODUCT_IDS),
             quantity=random.randint(1, 100),
             order_date=exec_date,
-            supplier_id=random.choice(VALID_SUPPLIER_IDS),
             status=random.choice(ORDER_STATUS)
         )
         orders.append(order)
@@ -124,6 +124,42 @@ def generate_inventory(exec_date: date) -> List[InventorySnapshot]:
         )
         snapshots.append(snapshot)
     return snapshots
+
+
+# =============================================================================
+# CSV Save Functions
+# =============================================================================
+
+def save_to_csv(data: List, data_type: str, exec_date: str) -> str:
+    """
+    Save data to local CSV file before Parquet conversion.
+    
+    Args:
+        data: List of data objects (Order or InventorySnapshot)
+        data_type: Type of data ('orders' or 'stock')
+        exec_date: Execution date in YYYY-MM-DD format
+    
+    Returns:
+        Path to the saved CSV file
+    """
+    import pandas as pd
+    
+    # Create directory structure: /raw/orders/YYYY-MM-DD/ or /raw/stock/YYYY-MM-DD/
+    csv_dir = os.path.join(LOCAL_DATA_PATH, "raw", data_type, exec_date)
+    os.makedirs(csv_dir, exist_ok=True)
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%H%M%S")
+    csv_filename = f"{data_type}_{exec_date}_{timestamp}.csv"
+    csv_path = os.path.join(csv_dir, csv_filename)
+    
+    # Convert data objects to DataFrame and save as CSV
+    records = [item.to_dict() for item in data]
+    df = pd.DataFrame(records)
+    df.to_csv(csv_path, index=False)
+    
+    logger.info(f"💾 Saved CSV: {csv_path} ({len(data)} records)")
+    return csv_path
 
 
 # =============================================================================
@@ -221,7 +257,7 @@ def verify_hdfs_file(hdfs_path: str) -> bool:
 # =============================================================================
 
 def generate_and_upload_orders(**context):
-    """Generate orders for all sample dates and upload to HDFS."""
+    """Generate orders for all sample dates, save to CSV, and upload to HDFS."""
     logger.info("📦 Starting Orders Generation and Upload...")
     
     success_count = 0
@@ -235,10 +271,14 @@ def generate_and_upload_orders(**context):
         orders = generate_orders(exec_date, num_orders=1000)
         logger.info(f"   Generated {len(orders)} orders")
         
-        # Convert to Parquet
+        # Step 1: Save to local CSV file
+        csv_path = save_to_csv(orders, "orders", date_str)
+        logger.info(f"   📁 Saved to local CSV: {csv_path}")
+        
+        # Step 2: Convert to Parquet
         parquet_data = create_parquet_buffer(orders, "orders")
         
-        # Upload to HDFS (Hive partition style folder)
+        # Step 3: Upload to HDFS (Hive partition style folder)
         hdfs_path = f"/raw/orders/order_date={date_str}/data.parquet"
         if upload_to_hdfs(hdfs_path, parquet_data):
             success_count += 1
@@ -254,7 +294,7 @@ def generate_and_upload_orders(**context):
 
 
 def generate_and_upload_inventory(**context):
-    """Generate inventory snapshots for all sample dates and upload to HDFS."""
+    """Generate inventory snapshots for all sample dates, save to CSV, and upload to HDFS."""
     logger.info("🛒 Starting Inventory Generation and Upload...")
     
     success_count = 0
@@ -268,10 +308,14 @@ def generate_and_upload_inventory(**context):
         inventory = generate_inventory(exec_date)
         logger.info(f"   Generated {len(inventory)} inventory snapshots")
         
-        # Convert to Parquet
+        # Step 1: Save to local CSV file
+        csv_path = save_to_csv(inventory, "stock", date_str)
+        logger.info(f"   📁 Saved to local CSV: {csv_path}")
+        
+        # Step 2: Convert to Parquet
         parquet_data = create_parquet_buffer(inventory, "inventory")
         
-        # Upload to HDFS (Hive partition style folder)
+        # Step 3: Upload to HDFS (Hive partition style folder)
         hdfs_path = f"/raw/stock/snapshot_date={date_str}/data.parquet"
         if upload_to_hdfs(hdfs_path, parquet_data):
             success_count += 1
@@ -411,18 +455,23 @@ with DAG(
     dag.doc_md = """
     ## HDFS Upload Sample Data DAG (Step 4)
     
-    **Purpose:** Generate sample procurement data, upload to HDFS, and sync partitions.
+    **Purpose:** Generate sample procurement data, save locally as CSV, upload to HDFS, and sync partitions.
     
     **When to run:** After Step 3 (HDFS directory initialization) is complete.
     
     **What it does:**
-    1. Generates 100 purchase orders per date
+    1. Generates 1000 purchase orders per date
     2. Generates 5 inventory snapshots per date (one per product)
-    3. Converts data to Parquet format (Snappy compression)
-    4. Uploads to HDFS via WebHDFS API
-    5. **Automatically syncs Hive partitions with Trino**
+    3. **Saves data to local CSV files** (for backup/reference)
+    4. Converts data to Parquet format (Snappy compression)
+    5. Uploads to HDFS via WebHDFS API
+    6. **Automatically syncs Hive partitions with Trino**
     
-    **Files Created:**
+    **Local CSV Files Created:**
+    - `/opt/airflow/data/raw/orders/YYYY-MM-DD/orders_YYYY-MM-DD_HHMMSS.csv`
+    - `/opt/airflow/data/raw/stock/YYYY-MM-DD/stock_YYYY-MM-DD_HHMMSS.csv`
+    
+    **HDFS Files Created:**
     - `/raw/orders/order_date=YYYY-MM-DD/data.parquet`
     - `/raw/stock/snapshot_date=YYYY-MM-DD/data.parquet`
     
