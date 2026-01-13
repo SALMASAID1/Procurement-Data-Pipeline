@@ -3,15 +3,15 @@
   "supplier_name": "FastShip Ltd",
   "order_date": "2026-01-14",
   "data_date": "2026-01-13",
-  "generated_at": "2026-01-13T20:19:56.785921",
+  "generated_at": "2026-01-13T21:06:36.716299",
   "items": [
     {
       "product_id": 5,
       "product_name": "Assembly Kit",
-      "quantity": 10113,
+      "quantity": 9408,
       "unit_cost": 60.0,
-      "total_cost": 606780.0
+      "total_cost": 564480.0
     }
   ],
-  "total_estimated_cost": 606780.0
+  "total_estimated_cost": 564480.0
 }

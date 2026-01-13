@@ -158,14 +158,16 @@ def create_trino_database(**context):
         logger.warning(f"Could not check existing databases: {e}")
     
     # Create new database connection
+    # Using 'starburst' engine which has better Trino compatibility
     database_config = {
         "name": "Procurement Trino",
-        "engine": "presto-jdbc",
+        "engine": "starburst",
         "details": {
             "host": TRINO_HOST,
             "port": TRINO_PORT,
             "catalog": TRINO_CATALOG,
             "schema": TRINO_SCHEMA,
+            "user": "trino",
             "ssl": False,
             "additional-options": ""
         }
