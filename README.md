@@ -104,7 +104,7 @@ All services should show as "Up" with healthy status:
 
 ---
 
-## 🚀 DAG Execution Order (Step-by-Step)
+##  DAG Execution Order (Step-by-Step)
 
 After starting the infrastructure with `docker-compose up -d`, trigger the Airflow DAGs **in the following order** from the Airflow UI (http://localhost:8081):
 

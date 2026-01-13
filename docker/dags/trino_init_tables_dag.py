@@ -1,6 +1,5 @@
 """
 Trino Schema Initialization DAG - Create Hive tables via Trino
-Step 5 of the Procurement Pipeline Setup (replaces trino-init container)
 
 This DAG creates the required Hive tables in Trino's file-based metastore:
 - orders (raw layer)

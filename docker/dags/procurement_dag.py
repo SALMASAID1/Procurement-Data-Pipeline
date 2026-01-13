@@ -2,12 +2,6 @@
 Procurement Pipeline DAG - Full Implementation
 Runs daily at 22:00 
 
-This DAG implements the complete procurement data pipeline:
-1. Sync Hive partitions with HDFS
-2. Aggregate orders per product
-3. Calculate net demand (MRP formula)
-4. Export supplier orders as JSON
-5. Run data quality checks and log exceptions
 """
 
 from airflow import DAG

@@ -2,11 +2,6 @@
 Metabase Dashboard Setup DAG
 Automatically configures Metabase with Trino connection and creates procurement dashboard
 
-This DAG:
-1. Waits for Metabase to be ready
-2. Creates Trino database connection
-3. Creates dashboard with 5 KPI cards
-4. Configures auto-refresh
 """
 
 from airflow import DAG

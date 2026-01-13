@@ -1,6 +1,5 @@
 """
     Trino Query Execution Client
-    
     Provides federated query capabilities across:
     - hive.procurement_raw (HDFS/Parquet data)
     - postgres.master_data (Product & Supplier master data)

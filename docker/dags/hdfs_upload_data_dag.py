@@ -2,10 +2,6 @@
 HDFS Upload Sample Data DAG - Generate and upload sample procurement data
 Step 4 of the Procurement Pipeline Setup
 
-This DAG:
-1. Generates sample Orders and Inventory data using Faker
-2. Converts to Parquet format
-3. Uploads to HDFS via WebHDFS REST API
 """
 
 from airflow import DAG
